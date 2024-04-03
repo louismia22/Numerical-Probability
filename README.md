@@ -1,2 +1,2 @@
-# Probabilit-s-num-riques
+# Probabilités-numériques
 Projet numérique du cours "Probabilités numériques"
