@@ -110,3 +110,28 @@ def calculate_probability(mu,mean, sigma, Si):
     # Calculate the probability using the mvn (multivariate normal) cumulative distribution function.
     prob, _ = mvn.mvnun(lower_bounds, upper_bounds, transformed_mean, transformed_cov)
     return prob
+
+
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------ Étape 2.e - Calculer une moyenne stratifiée ds quantités d'intérêt -----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+def calculate_s_squared(pis, sigma_hats, M):
+    #2.e.
+    #on calcul les estimateurs stratifiés. On donne des listes pis, sigma_hats en input. 
+    s_squared = (1 / M) * sum((pi * sigma_hat) ** 2 for pi, sigma_hat in zip(pis, sigma_hats))
+    return s_squared
+
+
+
+def calculate_epsilon_t_plus_1(s_squared_values, nu_hat_phi_values):
+    #2.e
+    #current fit de l'estimateur stratifié, et dernière étape de l'algo. 
+  
+    sum_inverse_s_squared = sum(1/s_squared for s_squared in s_squared_values)
+    sum_product_inverse_s_nu_hat = sum(
+        1/s_squared_values[tau-1] * sum(nu_hat_phi_values[tau-1])
+        for tau in range(1, len(s_squared_values) + 1)
+    )
+    epsilon_t_plus_1 = sum_inverse_s_squared**(-1) - sum_product_inverse_s_nu_hat
+    return epsilon_t_plus_1
