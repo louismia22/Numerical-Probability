@@ -22,6 +22,7 @@ def payoff_function(x):
 
 def calculate_strata_boundaries(i_tuple, I, d):
     """
+    préliminaire : calcul des strats. 
     Calcul les strats pour une loi normale multivariée de dimension d. Dans ce code on suppose que la covariance est l'identitée. 
 
     :param i_tuple: m-uplet (i1, ..., im) representing indices of the strata
@@ -43,6 +44,8 @@ def calculate_strata_boundaries(i_tuple, I, d):
     
     # Si should be a tuple of tuples representing the Cartesian product of intervals across dimensions
     return tuple(Si)
+
+
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------ Étape 2.A.i - mise à jour de nu -----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -58,6 +61,32 @@ def update_nu_hat(pi, Y, payoff=payoff_function):
     nu_hat_phi= (pi/ Mi) * sum_payoff_1 #le pi est donnée, le Mi on l'a déduit 
     nu_hat_phi2= (pi/ Mi) * sum_payoff_2
     return nu_hat_phi, nu_hat_phi2 #on renvoie les deux mu_hat_1, mu_hat_2 -> l'idée
+
+
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------ Étape 2.A.iii - calcul du gradient_V à partir des calculs précédents ----------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+def calculer_gradient_V(grad_mu,grad_mu_phi2,mu_phi,mu_phi2, p_i, sigma_i):
+    """
+    Important : avoir les listes qui contiennent tout. On doit stocker ts ls objets ds ds listes 
+    Calcule le gradient de V par rapport à mu en utilisant les gradients donnés et les valeurs pour f, phi, pi et sigma_i.
+    
+    """
+    I = len(p_i)  # Nombre de termes dans la somme
+    gradient_V = np.zeros_like(grad_mu)  # Initialisation du gradient de V(mu) à zéro
+
+    for i in range(I):
+        if p_i[i] * sigma_i[i] != 0:  # Calculer seulement si le produit pi * sigma_i est non nul
+            term_1 = grad_mu[i] * mu_phi2[i]
+            term_2 = grad_mu_phi2[i]*p_i[i]
+            common_term = 2*(mu_phi[i]*grad_mu[i])
+
+            gradient_V += (term_1 + term_2 - common_term) / (2 * p_i[i] * sigma_i[i])
+
+    return gradient_V
 
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -119,7 +148,7 @@ def calculate_M_i(q_t_plus_1_list, i, M):
 #------------------------------ Étape 2.d - mise à jour des probabilités -----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 
-# à vérifier cette fonction. Mais petit draf. 
+# à vérifier cette fonction. Mais petit draf. Pour chaque strat on calcul cette proba, et il nous faut un vecteur mu. 
 
 def calculate_probability(mu,mean, sigma, Si): 
     #2.d. 
