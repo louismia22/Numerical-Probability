@@ -6,6 +6,8 @@
 import numpy as np 
 import pandas as pd 
 from scipy.stats import mvn
+from scipy.stats import norm
+
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -13,7 +15,34 @@ def payoff_function(x):
     #fonction phi
     return x**2
 
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------Calcul des strats Si------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+def calculate_strata_boundaries(i_tuple, I, d):
+    """
+    Calcul les strats pour une loi normale multivariée de dimension d. Dans ce code on suppose que la covariance est l'identitée. 
+
+    :param i_tuple: m-uplet (i1, ..., im) representing indices of the strata
+    :param I: Positive integer used in the calculation of strata boundaries
+    :param d: Dimension of the multivariate normal distribution
+    :return: Strata boundaries Si as a product of tuples
+    """
+    Si = []
+    
+    # Compute the CDF for each component of the tuple i_tuple
+    for ik in i_tuple:
+        # Compute the CDF for the lower and upper bounds
+        lower_bound = norm.ppf((ik - 1) / I)
+        upper_bound = norm.ppf(ik / I)
+        
+        # As we're considering multivariate normal distribution, we assume independence
+        # and hence the product of intervals across dimensions forms the stratum.
+        Si.append(((lower_bound, upper_bound),) * d)
+    
+    # Si should be a tuple of tuples representing the Cartesian product of intervals across dimensions
+    return tuple(Si)
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------ Étape 2.A.i - mise à jour de nu -----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
