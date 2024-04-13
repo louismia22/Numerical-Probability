@@ -5,6 +5,7 @@
 
 import numpy as np 
 import pandas as pd 
+from scipy.stats import mvn
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -29,6 +30,27 @@ def update_nu_hat(pi, Y, payoff=payoff_function):
     nu_hat_phi2= (pi/ Mi) * sum_payoff_2
     return nu_hat_phi, nu_hat_phi2 #on renvoie les deux mu_hat_1, mu_hat_2 -> l'idée
 
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------ Étape 2.b - mise à jour de la direction de stratifaction -----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+def update_direction(mu_t, gradient_V, gamma_t, m):
+   #2.b. 
+   #Mise à jour de la direction de stratifaction. (ittération). On donne aussi m le nombre de composantes singulières que l'on garde.
+   
+    mu_hat = mu_t - gamma_t * gradient_V
+
+    # Perform singular value decomposition
+    U, s, Vt = np.linalg.svd(mu_hat)
+
+    # Define mu_(t+1) as the orthogonal matrix found by keeping the m left singular vectors
+    mu_t_plus_1 = U[:, :m]
+
+    return mu_t_plus_1
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------ Étape 2.c - mise à jour de standard deviation, allocation et nouveaux Mi -----------------------------------------------------------------------------------
@@ -68,3 +90,23 @@ def calculate_M_i(q_t_plus_1_list, i, M):
 #------------------------------ Étape 2.d - mise à jour des probabilités -----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 
+# à vérifier cette fonction. Mais petit draf. 
+
+def calculate_probability(mu,mean, sigma, Si): 
+    #2.d. 
+    #On doit mettre à jour les probas, du coup on doit calculer la proba d'être dans Si. On appelle sigma le covariance de Y. 
+    #mean est la moyenne de y
+
+    #param Si: A list of tuples representing the bounds in each dimension of Si. Dimension d.
+    lower_bounds, upper_bounds = zip(*Si)
+
+    # The mean vector after the transformation mu^T Y is the product of mu and the means of Y, which is zero.
+    # Thus, the transformed mean is zero.
+    transformed_mean = np.zeros_like(mean)
+
+    # The covariance matrix after the transformation mu^T Y is mu * sigma * mu^T.
+    transformed_cov = np.outer(mu, mu) * sigma 
+
+    # Calculate the probability using the mvn (multivariate normal) cumulative distribution function.
+    prob, _ = mvn.mvnun(lower_bounds, upper_bounds, transformed_mean, transformed_cov)
+    return prob
