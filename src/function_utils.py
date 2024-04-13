@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd 
 from scipy.stats import mvn
 from scipy.stats import norm
+from scipy.linalg import cholesky
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -61,6 +62,57 @@ def update_nu_hat(pi, Y, payoff=payoff_function):
     nu_hat_phi= (pi/ Mi) * sum_payoff_1 #le pi est donnée, le Mi on l'a déduit 
     nu_hat_phi2= (pi/ Mi) * sum_payoff_2
     return nu_hat_phi, nu_hat_phi2 #on renvoie les deux mu_hat_1, mu_hat_2 -> l'idée
+
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------ Étape 2.A.ii - tirage suivant la distribution/calcul du gradient de nu -----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+def stratified_sampling_linear_projection(mu, Sigma, v, K,s=None):
+    """Cette fonction sert à tirer Y conditionnellement à mu.T*Y = s. Utile pour le problème. 
+
+    Generates K samples from N(0, Sigma) stratified along the direction determined by v.
+    
+    Args:
+    - mu (array): The mean vector of the distribution.
+    - Sigma (2D array): The covariance matrix of the distribution.
+    - v (array): The vector along which stratification is done.
+    - K (int): The number of stratified samples to generate.
+    - x (optionnal) :  si on donne une valeur pour x alors c'est qu'on conditionne à une valeur particulière de x. Sinon on sample sur tout la strat Si. Taille K
+    
+    Returns:
+    - samples (2D array): The generated stratified samples. (K, de N(0,sigma), stratifié sur la direction donnée par v)
+    """
+    d = len(mu)  # Dimension of the normal distribution
+    # Normalize v so that v^T Sigma v = 1
+    v = v / np.sqrt(v.T @ Sigma @ v)
+    
+    # Generate K stratified samples for the standard normal distribution along v
+    U = np.random.uniform(0, 1, K)     # Uniformly distributed samples in (0,1)
+    V = (np.arange(K) + U) / K         # Stratified samples in (0,1)
+    X = norm.ppf(V)                    # Inverse CDF (quantile function) to get stratified samples for N(0, 1)
+   
+    # Compute the matrix A for the conditional distribution of xi given x
+    A = cholesky(Sigma, lower=True)    # Cholesky factorization
+    A_minus_v_Sigma_v_T_A = A - np.outer(Sigma @ v, v.T @ A)
+    
+    # Generate K samples from the conditional distribution of xi given X
+    Z = np.random.randn(K, d)  # Z ~ N(0, I) in d dimensions 
+    if s is not None:
+
+        xi_samples = Sigma @ v * s[:, None] + (A_minus_v_Sigma_v_T_A @ Z.T).T  # Conditional samples 
+        #xi_samples = Sigma @ v @ x + (A_minus_v_Sigma_v_T_A @ Z.T).T
+
+    else:
+        xi_samples = Sigma @ v * X[:, None] + (A_minus_v_Sigma_v_T_A @ Z.T).T 
+        #xi_samples = Sigma @ v @ X + (A_minus_v_Sigma_v_T_A @ Z.T).T 
+        
+    
+    return xi_samples + mu             # Add the mean to each sample
+
+#comment calculer le gradient de nu ? ?? 
 
 
 
