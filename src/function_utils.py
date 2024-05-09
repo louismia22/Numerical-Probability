@@ -60,7 +60,7 @@ def update_nu_hat(pi, Y, payoff=payoff_function):
     #pour chaque i on doit mettre à jour cette fonction nu. On a donc 
     #   i). On donne en input pi et Y (liste de réalisation, de taille Mi), choisi en avance, on renvoie ensuite pour phi et phi2 la valeur nu
 
-    Mi = len(Y) #Y est une liste de v.a. samplés suivant la distribution P(Y|Y in S)
+    Mi = len(Y) # Y est une liste de v.a. samplés suivant la distribution P(Y|Y in S)
     sum_payoff_1 = np.sum(payoff(Y))
     sum_payoff_2 = np.sum(payoff(Y)**2) #on prend aussi le carré du payoff 
     nu_hat_phi= (pi/ Mi) * sum_payoff_1 #le pi est donnée, le Mi on l'a déduit 
@@ -74,7 +74,7 @@ def update_nu_hat(pi, Y, payoff=payoff_function):
 
 
 
-def stratified_sampling_linear_projection(mu, Sigma, v, K,s=None):
+def stratified_sampling_linear_projection(mu, Sigma, v, K, s=None):
     """Cette fonction sert à tirer Y conditionnellement à mu.T*Y = s. Utile pour le problème. 
 
     Generates K samples from N(0, Sigma) stratified along the direction determined by v.
@@ -116,8 +116,7 @@ def stratified_sampling_linear_projection(mu, Sigma, v, K,s=None):
     
     return xi_samples + mu             # Add the mean to each sample
 
-#comment calculer le gradient de nu ? ?? 
-
+# comment calculer le gradient de nu ? ?? 
 
 
 
@@ -127,7 +126,7 @@ def stratified_sampling_linear_projection(mu, Sigma, v, K,s=None):
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def calculer_gradient_V(grad_mu,grad_mu_phi2,mu_phi,mu_phi2, p_i, sigma_i):
+def calculer_gradient_V(grad_mu, grad_mu_phi2, mu_phi, mu_phi2, p_i, sigma_i):
     """
     Important : avoir les listes qui contiennent tout. On doit stocker ts ls objets ds ds listes 
     Calcule le gradient de V par rapport à mu en utilisant les gradients donnés et les valeurs pour f, phi, pi et sigma_i.
@@ -168,33 +167,44 @@ def update_direction(mu_t, gradient_V, gamma_t, m):
 
     return mu_t_plus_1
 
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+#------------------------------ Étape 2.c - mise à jour de standard deviation, allocation et nouveaux Mi -----------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+def calculate_sigma_hat(nu_hat_phi2, nu_hat_phi, pi, mu):
+   #2.c.i. 
+   #on calcul juste pour tous les i l'estimateur de la standard deviation sigma_hat sur chaque strat. 
+    term1 = nu_hat_phi2 /pi 
+    term2 = (nu_hat_phi/pi)**2
+    sigma_hat = np.sqrt((term1 - term2))
+    return sigma_hat
+
+
+
+def calculate_q_t_plus_1(p_i, sigma_hat_i,pis, sigma_hats):
+    #2.c.ii.
+    #On calcul le vecteur d'allocation pour chaque i ici. On donne le pi, sigma_hat_i, et surtout la liste de tous les sigma hats et de tous les pis
+    denominator = sum([p_j * sigma_hat_j for p_j,  sigma_hat_j in zip(pis, sigma_hats)])
+    q_t_plus_1 = (p_i *  sigma_hat_i) / denominator 
+    return q_t_plus_1
+
+
+
+def calculate_M_i(q_t_plus_1_list, i, M):
+    #2.c;ii.
+    #on calcul ici les nouveaux Mi, pour chaque i.. On se base sur la valeur de qi précédente que l'on a pu calculer. 
+    #les Mi sont fonctions des q_i
+    sum_q_j_up_to_i = sum(q_t_plus_1_list[:i])
+    sum_q_j_less_than_i = sum(q_t_plus_1_list[:i-1])
+    M_i = int(M * sum_q_j_up_to_i) - int(M * sum_q_j_less_than_i)
+    return M_i
 
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 #------------------------------ Étape 2.d - mise à jour des probabilités -----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-# à vérifier cette fonction. Mais petit draf. Pour chaque strat on calcul cette proba, et il nous faut un vecteur mu. 
-
-def calculate_probability(mu,mean, sigma, Si): 
-    #2.d. 
-    #On doit mettre à jour les probas, du coup on doit calculer la proba d'être dans Si. On appelle sigma le covariance de Y. 
-    #mean est la moyenne de y
-
-    #param Si: A list of tuples representing the bounds in each dimension of Si. Dimension d.
-    lower_bounds, upper_bounds = zip(*Si)
-
-    # The mean vector after the transformation mu^T Y is the product of mu and the means of Y, which is zero.
-    # Thus, the transformed mean is zero.
-    transformed_mean = np.zeros_like(mean)
-
-    # The covariance matrix after the transformation mu^T Y is mu * sigma * mu^T.
-    transformed_cov = np.outer(mu, mu) * sigma 
-
-    # Calculate the probability using the mvn (multivariate normal) cumulative distribution function.
-    prob, _ = mvn.mvnun(lower_bounds, upper_bounds, transformed_mean, transformed_cov)
-    return prob
 
 
 
@@ -296,9 +306,10 @@ def initialization(mu_0, M, sigma):
     m = len(mu_0)  # Number of strata
     M_0 = np.full(m, M // m)  # Evenly distribute initial draws
     M_0[:M % m] += 1  # Distribute any remaining draws equally
-
+    
     # Calculate strata boundaries and probabilities
     strata_bounds = [calculate_strata_boundaries(i, 10, len(mu_0)) for i in range(1, m + 1)]
+    print(strata_bounds)
     probabilities = [calculate_probability(mu_0, sigma, Si) for Si in strata_bounds]
 
     return {"M_0": M_0, "probabilities": probabilities}
