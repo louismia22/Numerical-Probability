@@ -95,7 +95,7 @@ def compute_m(q, M):
     m = np.zeros(I)
     cumulative_sum = np.cumsum(q)
 
-    m[0] = int(M*cumulative_sum[0])
+    m[0] = max(int(M*cumulative_sum[0]), 1)
 
     for i in range(1, I):
 
@@ -162,6 +162,7 @@ class Algorithm():
             nu_f_phi[i] = self.p[i]*np.mean(np.apply_along_axis(self.phi, 1, samples))
             nu_f_phi2[i] = self.p[i]*np.mean(np.apply_along_axis(self.phi2, 1, samples))
 
+            
             grad_nu_f[i] = - np.mean(samples, axis=0)/np.abs(self.mu)
             grad_nu_f_phi[i] = - np.mean(samples*np.apply_along_axis(self.phi, 1, samples)[:, np.newaxis]/np.abs(self.mu), axis=0)
             grad_nu_f_phi2[i] = - np.mean(samples*np.apply_along_axis(self.phi2, 1, samples)[:, np.newaxis]/np.abs(self.mu), axis=0)
@@ -201,9 +202,10 @@ class Algorithm():
         U, _, _ = np.linalg.svd(mu_tilde[:, np.newaxis])
         self.mu = U[:, :1].T[0]
 
-        # Update sigma 
-        self.sigma = np.sqrt(nu_f_phi2/self.p
-                        - ((nu_f_phi)/self.p)**2)
+        # Update sigma
+        self.sigma = np.sqrt(
+            np.maximum(nu_f_phi2/self.p
+                        - ((nu_f_phi)/self.p)**2, 0))
         
         # Update q
         self.q = (self.p * self.sigma)/np.sum(self.p * self.sigma)
